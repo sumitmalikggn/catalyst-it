@@ -7,24 +7,31 @@ $longOptions  = array(
     "file:",
     "create_table",
     "dry_run",
-    "help::",
+    "help",
 );
 $options = getopt($shortOptions, $longOptions);
 
+// Executing --help Command
 if (isset($options['help'])) { // If help option is specified, print help text and exit.
     display_help();
 
     exit;
 }
 
+// Executing --create_table Command
 if (isset($options['create_table'])) {
     // Check for all required parameters - Username, Password and DB Host
     if (isset($options['u']) && isset($options['p']) && isset($options['h']) && isset($options['d'])) {
         $conn = get_db_connection ($options['u'], $options['p'], $options['h'], $options['d']);
-        create_user_table ();
+        log_message ("DB connection successful");
+        if (!isset($options['dry_run'])) {
+            create_user_table ($conn);
+        }
+        
+        $conn->close();
     }
     else {
-        echo "\t"."Please provide all required DB access parameters. Use --help for more information."."\n";
+        log_message ("Please provide all required DB access parameters. Use --help for more information.");
     }
 
     exit; // No further execution required if create_table option is specified.
@@ -34,17 +41,46 @@ if (isset($options['create_table'])) {
  * This method will display help text
  */
 function display_help () {
-    echo "\t"."--file \t\t\t This is the name of the CSV to be parsed"."\n";
-    echo "\t"."--create_table \t\t This will cause the MySQL users table to be built \n\t\t\t\t (and no further action will be taken)"."\n";
-    echo "\t"."--dry_run \t\t This will be used with the --file directive in the instance \n\t\t\t\t that we want to run the script but not insert into the DB.\n\t\t\t\t All other functions will be executed, but the database won't \n\t\t\t\t be altered."."\n";
-    echo "\t"."-u \t\t\t MySQL username"."\n";
-    echo "\t"."-p \t\t\t MySQL password"."\n";
-    echo "\t"."-h \t\t\t MySQL host"."\n";
-    echo "\t"."-d \t\t\t MySQL db name"."\n";
+    log_message ("--file \t\t\t This is the name of the CSV to be parsed");
+    log_message ("--create_table \t\t This will cause the MySQL users table to be built \n\t\t\t\t (and no further action will be taken)");
+    log_message ("--dry_run \t\t This will be used with the --file directive in the instance \n\t\t\t\t that we want to run the script but not insert into the DB.\n\t\t\t\t All other functions will be executed, but the database won't \n\t\t\t\t be altered");
+    log_message ("-u \t\t\t MySQL username");
+    log_message ("-p \t\t\t MySQL password");
+    log_message ("-h \t\t\t MySQL host");
+    log_message ("-d \t\t\t MySQL db name");
+
+    return;
 }
 
-function create_user_table () {
-    // Create table code will go here...
+/**
+ * This method will create user table, will also delete the table first if it already exists
+ */
+function create_user_table ($conn) {
+    // Delete if the table already exists
+    $drop_sql = "DROP TABLE IF EXISTS users";
+
+    if ($conn->query($drop_sql) === TRUE) {
+        log_message("Deleted if table existed already");
+    } else {
+        log_message("Error deleting existing table: " . $conn->error);
+        return;
+    }
+
+    // sql to create table
+    $sql = "CREATE TABLE users (
+        id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(30) NOT NULL,
+        surname VARCHAR(30) NOT NULL,
+        email VARCHAR(50) NOT NULL UNIQUE KEY
+        )";
+
+    if ($conn->query($sql) === TRUE) {
+        log_message("Users table created successfully");
+    } else {
+        log_message("Error creating table: " . $conn->error);
+    }
+
+    return;
 }
 
 /**
@@ -53,10 +89,19 @@ function create_user_table () {
 function get_db_connection ($user, $pass, $host, $db) {
     $conn = new mysqli ($host, $user, $pass, $db);
     if ($conn->connect_error) {
-        die("\tConnection failed: " . $conn->connect_error . "\n");
+        die(log_message ("Connection failed: " . $conn->connect_error));
     } 
 
     return $conn;
+}
+
+/**
+ * This method will display a given string message on Terminal.
+ */
+function log_message ($msg) {
+    echo "\t" . $msg . "\n";
+
+    return;
 }
 
 ?>
