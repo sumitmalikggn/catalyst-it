@@ -29,12 +29,40 @@ if (isset($options['create_table'])) {
         }
         
         $conn->close();
-    }
-    else {
+    } else {
         log_message ("Please provide all required DB access parameters. Use --help for more information.");
     }
 
     exit; // No further execution required if create_table option is specified.
+}
+
+// Executing --file Command
+if (isset($options['file'])) {
+    if (is_file($options['file'])) {
+        if (valid_csv ($options['file'])) {
+            $handle = fopen($options['file'], "r");
+            log_message ("Reading file...");
+
+            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                $name = ucwords($data[0]);
+                $surname = ucwords($data[1]);
+                $email = strtolower($data[2]);
+                log_message ("Importing - ".$data[0].' | '.$data[1].' | '. $data[2]);
+                if (valid_email($email)) {
+                    // Record insertion code will go here...
+                } else {
+                    log_message ("\tRecord not imported. Invalid email address.");
+                    continue;
+                }               
+            }
+        } else {
+            log_message ("Invalid file. Please specify a valid CSV file.");
+        }
+    } else {
+        log_message ("File do not exist. Please specify a valid CSV file.");
+    }
+
+    exit;
 }
 
 /**
@@ -103,5 +131,33 @@ function log_message ($msg) {
 
     return;
 }
+
+function valid_email ($email) {
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+
+    return true;
+}
+
+function valid_csv ($file) {
+    $csv_mime_types = [ 
+        'text/csv',
+        'text/plain',
+        'application/csv',
+        'text/comma-separated-values',
+        'application/excel',
+        'application/vnd.ms-excel',
+        'application/vnd.msexcel',
+        'text/anytext',
+        'application/octet-stream',
+        'application/txt',
+    ];
+    $finfo = finfo_open( FILEINFO_MIME_TYPE );
+    $mime_type = finfo_file( $finfo, $file );
+
+    return in_array( $mime_type, $csv_mime_types );
+}
+
 
 ?>
