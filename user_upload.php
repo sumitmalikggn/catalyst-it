@@ -41,19 +41,37 @@ if (isset($options['file'])) {
     if (is_file($options['file'])) {
         if (valid_csv ($options['file'])) {
             $handle = fopen($options['file'], "r");
-            log_message ("Reading file...");
 
-            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-                $name = ucwords($data[0]);
-                $surname = ucwords($data[1]);
-                $email = strtolower($data[2]);
-                log_message ("Importing - ".$data[0].' | '.$data[1].' | '. $data[2]);
-                if (valid_email($email)) {
-                    // Record insertion code will go here...
-                } else {
-                    log_message ("\tRecord not imported. Invalid email address.");
-                    continue;
-                }               
+            if (isset($options['u']) && isset($options['p']) && isset($options['h']) && isset($options['d'])) {
+                $conn = get_db_connection ($options['u'], $options['p'], $options['h'], $options['d']);
+
+                // prepare and bind
+                $ins_sql = $conn->prepare("INSERT INTO users (name, surname, email) VALUES (?, ?, ?)");
+                $ins_sql->bind_param("sss", $name, $surname, $email);
+
+                log_message ("Reading file...");
+                fgetcsv($handle, 10000, ","); // Ignoring first line in the file as it comtains only field names
+                while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                    $name = titleCase($data[0]);
+                    $surname = titleCase($data[1]);
+                    $email = strtolower($data[2]);
+                    log_message ("Checking User - ".$name.' | '.$surname.' | '. $email);
+                    if (valid_email($email)) {
+                        if (!isset($options['dry_run'])) {
+                            if ($ins_sql->execute()) {
+                                log_message ("\User imported.");
+                            } else {
+                                log_message ("\User import failed - " . $ins_sql->error);
+                            }
+                        }
+                    } else {
+                        log_message ("\User error - Invalid email address.");
+                        continue;
+                    }
+                }
+                $conn->close();
+            } else {
+                log_message ("Please provide all required DB access parameters. Use --help for more information.");
             }
         } else {
             log_message ("Invalid file. Please specify a valid CSV file.");
@@ -132,6 +150,9 @@ function log_message ($msg) {
     return;
 }
 
+/**
+ * This method check if an email address is valid or not.
+ */
 function valid_email ($email) {
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         return false;
@@ -140,6 +161,9 @@ function valid_email ($email) {
     return true;
 }
 
+/**
+ * This method check if a file is a valid csv or not.
+ */
 function valid_csv ($file) {
     $csv_mime_types = [ 
         'text/csv',
@@ -157,6 +181,36 @@ function valid_csv ($file) {
     $mime_type = finfo_file( $finfo, $file );
 
     return in_array( $mime_type, $csv_mime_types );
+}
+
+/**
+ * This method convers a string to proper name format.
+ */
+function titleCase($string) {
+    $word_splitters = array(' ', '-', "O'", "L'", "D'", 'St.', 'Mc', 'Mac');
+    $lowercase_exceptions = array('the', 'van', 'den', 'von', 'und', 'der', 'de', 'di', 'da', 'of', 'and', "l'", "d'");
+    $uppercase_exceptions = array('III', 'IV', 'VI', 'VII', 'VIII', 'IX');
+
+    $string = strtolower($string);
+    foreach ($word_splitters as $delimiter) {
+        $words = explode($delimiter, $string);
+        $newwords = array();
+        foreach ($words as $word) {
+            if (in_array(strtoupper($word), $uppercase_exceptions))
+                $word = strtoupper($word);
+            else
+                if (!in_array($word, $lowercase_exceptions))
+                    $word = ucfirst($word);
+
+            $newwords[] = $word;
+        }
+
+        if (in_array(strtolower($delimiter), $lowercase_exceptions))
+            $delimiter = strtolower($delimiter);
+
+        $string = join($delimiter, $newwords);
+    }
+    return $string;
 }
 
 
