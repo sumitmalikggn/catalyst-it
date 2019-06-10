@@ -2,20 +2,20 @@
 // Script will upload users from csv to MySQL DB.
 
 // Declaring the expected command line options for the script
-$shortOptions = "u:p:h:d:";
-$longOptions  = array(
-    "file:",
-    "create_table",
-    "dry_run",
-    "help",
+$short_options = "u:p:h:d:"; // DB access details - username, password, host and db name
+$long_options  = array(
+    "file:", // CSV file
+    "create_table", // command to create user table
+    "dry_run", // command to skip db alteration
+    "help", // command to see help text for all possible options
 );
-$options = getopt($shortOptions, $longOptions);
+$options = getopt($short_options, $long_options); // Getting all options specified when executing from terminal
 
 // Executing --help Command
 if (isset($options['help'])) { // If help option is specified, print help text and exit.
     display_help();
 
-    exit;
+    exit;  // No futher execution required when help command is specified.
 }
 
 // Executing --create_table Command
@@ -24,7 +24,7 @@ if (isset($options['create_table'])) {
     if (isset($options['u']) && isset($options['p']) && isset($options['h']) && isset($options['d'])) {
         $conn = get_db_connection ($options['u'], $options['p'], $options['h'], $options['d']);
         log_message ("DB connection successful");
-        if (!isset($options['dry_run'])) {
+        if (!isset($options['dry_run'])) { // Not creating table if it's a dry run
             create_user_table ($conn);
         }
         
@@ -33,7 +33,7 @@ if (isset($options['create_table'])) {
         log_message ("Please provide all required DB access parameters. Use --help for more information.");
     }
 
-    exit; // No further execution required if create_table option is specified.
+    exit; // No further execution required if create_table command is specified.
 }
 
 // Executing --file Command
@@ -50,23 +50,22 @@ if (isset($options['file'])) {
                 $ins_sql->bind_param("sss", $name, $surname, $email);
 
                 log_message ("Reading file...");
-                fgetcsv($handle, 10000, ","); // Ignoring first line in the file as it comtains only field names
+                fgetcsv($handle, 10000, ","); // Ignoring first line in the file as it contains only field names
                 while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
                     $name = titleCase($data[0]);
                     $surname = titleCase($data[1]);
                     $email = strtolower($data[2]);
                     log_message ("Checking User - ".$name.' | '.$surname.' | '. $email);
                     if (valid_email($email)) {
-                        if (!isset($options['dry_run'])) {
+                        if (!isset($options['dry_run'])) { // Don't import if it's a dry run
                             if ($ins_sql->execute()) {
-                                log_message ("\User imported.");
+                                log_message ("\tUser imported.");
                             } else {
-                                log_message ("\User import failed - " . $ins_sql->error);
+                                log_message ("\tUser import failed - " . $ins_sql->error);
                             }
                         }
                     } else {
-                        log_message ("\User error - Invalid email address.");
-                        continue;
+                        log_message ("\tUser error - Invalid email address.");
                     }
                 }
                 $conn->close();
@@ -184,7 +183,7 @@ function valid_csv ($file) {
 }
 
 /**
- * This method convers a string to proper name format.
+ * This method converts a string to proper name format.
  */
 function titleCase($string) {
     $word_splitters = array(' ', '-', "O'", "L'", "D'", 'St.', 'Mc', 'Mac');
