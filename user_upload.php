@@ -1,6 +1,9 @@
 <?php
 // Script will upload users from csv to MySQL DB.
 
+include_once "./inc/Logger.php";
+include_once "./inc/CSV.php";
+
 // Declaring the expected command line options for the script
 $short_options = "u:p:h:d:"; // DB access details - username, password, host and db name
 $long_options  = array(
@@ -9,8 +12,8 @@ $long_options  = array(
     "dry_run", // command to skip db alteration
     "help", // command to see help text for all possible options
 );
-$options = getopt($short_options, $long_options); // Getting all options specified when executing from terminal
-
+//$options = getopt($short_options, $long_options); // Getting all options specified when executing from terminal
+$options = $_GET;
 // Executing --help Command
 if (isset($options['help'])) { // If help option is specified, print help text and exit.
     display_help();
@@ -38,45 +41,41 @@ if (isset($options['create_table'])) {
 
 // Executing --file Command
 if (isset($options['file'])) {
-    if (is_file($options['file'])) {
-        if (valid_csv ($options['file'])) {
-            $handle = fopen($options['file'], "r");
+    $file_uploader = new CSV($options['file']);
+    
+    if (!$file_uploader->error) {
+        if (isset($options['u']) && isset($options['p']) && isset($options['h']) && isset($options['d'])) {
+            $conn = get_db_connection ($options['u'], $options['p'], $options['h'], $options['d']);
 
-            if (isset($options['u']) && isset($options['p']) && isset($options['h']) && isset($options['d'])) {
-                $conn = get_db_connection ($options['u'], $options['p'], $options['h'], $options['d']);
+            $csv_data = $file_uploader->parse_csv();
+            $file_uploader->close_csv();
+            // prepare and bind
+            $ins_sql = $conn->prepare("INSERT INTO users (name, surname, email) VALUES (?, ?, ?)");
+            $ins_sql->bind_param("sss", $name, $surname, $email);
 
-                // prepare and bind
-                $ins_sql = $conn->prepare("INSERT INTO users (name, surname, email) VALUES (?, ?, ?)");
-                $ins_sql->bind_param("sss", $name, $surname, $email);
-
-                log_message ("Reading file...");
-                fgetcsv($handle, 10000, ","); // Ignoring first line in the file as it contains only field names
-                while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-                    $name = titleCase($data[0]);
-                    $surname = titleCase($data[1]);
-                    $email = strtolower($data[2]);
-                    log_message ("Checking User - ".$name.' | '.$surname.' | '. $email);
-                    if (valid_email($email)) {
-                        if (!isset($options['dry_run'])) { // Don't import if it's a dry run
-                            if ($ins_sql->execute()) {
-                                log_message ("\tUser imported.");
-                            } else {
-                                log_message ("\tUser import failed - " . $ins_sql->error);
-                            }
+            foreach ($csv_data as $data) {
+                $name = titleCase($data['name']);
+                $surname = titleCase($data['surname']);
+                $email = strtolower($data['email']);
+                Logger::log ("Checking User - ".$name.' | '.$surname.' | '. $email);
+                if (valid_email($email)) {
+                    if (!isset($options['dry_run'])) { // Don't import if it's a dry run
+                        if ($ins_sql->execute()) {
+                            Logger::log ("\tUser imported.");
+                        } else {
+                            Logger::log ("\tUser import failed - " . $ins_sql->error);
                         }
-                    } else {
-                        log_message ("\tUser error - Invalid email address.");
                     }
+                } else {
+                    Logger::log ("\tUser error - Invalid email address.");
                 }
-                $conn->close();
-            } else {
-                log_message ("Please provide all required DB access parameters. Use --help for more information.");
             }
+            $conn->close();
         } else {
-            log_message ("Invalid file. Please specify a valid CSV file.");
+            Logger::log ("Please provide all required DB access parameters. Use --help for more information.");
         }
     } else {
-        log_message ("File do not exist. Please specify a valid CSV file.");
+        Logger::log ("Exiting script due to file error.");
     }
 
     exit;
@@ -132,10 +131,13 @@ function create_user_table ($conn) {
  * This method will simply create a MySQL db connection, will display error if connection fails.
  */
 function get_db_connection ($user, $pass, $host, $db) {
-    $conn = new mysqli ($host, $user, $pass, $db);
-    if ($conn->connect_error) {
-        die(log_message ("Connection failed: " . $conn->connect_error));
-    } 
+    try {
+        $conn = new mysqli ($host, $user, $pass, $db);
+    }
+    catch (exception $e) {
+        log_message("Connection failed: " . $e->getMessage());
+        die();
+    }
 
     return $conn;
 }
