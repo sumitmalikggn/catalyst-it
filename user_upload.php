@@ -72,7 +72,9 @@ if (isset($options['file'])) {
                 $data['email'] = strtolower($data['email']);
                 Utility::log ('INFO', 'Checking User - '.implode(' | ', $data));
                 if (Utility::valid_email($data['email'])) {
-                    $db->insert('users', $data); // Insert user
+                    if (!isset($options['dry_run'])) { // Not creating table if it's a dry run
+                        $db->insert('users', $data); // Insert user
+                    }
                 } else {
                     Utility::log ('ERROR', "\tUser error - Invalid email address.");
                 }
