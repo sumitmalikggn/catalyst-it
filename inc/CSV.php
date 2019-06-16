@@ -4,26 +4,24 @@
  */
 Class CSV {
     private $file;
-    public $error = false;
 
     // Initializes the $file variable with file path
     public function __construct ($file_path) {
         if (is_file($file_path)) {
             if ($this->valid_csv($file_path)) {
                 try {
-                    $this->file = fopen($file_path, "r");
-                } catch (exception $e) {
-                    Utility::log ('ERROR', 'Failed to open file: ', $e->getMessage());
-                    $this->error = true;
+                    if (!$this->file = fopen($file_path, "r")) {
+                        throw new Exception ('Failed to open file.');
+                    }
+                } catch (Exception $e) {
+                    die (Utility::log ('ERROR', $e->getMessage()));
                 }
             } else {
-                Utility::log ('ERROR', 'Invalid file. Please specify a valid CSV file.');
-                $this->error = true;
+                die (Utility::log ('ERROR', 'Invalid file. Please specify a valid CSV file.'));
             }
 
         } else {
-            Utility::log ('ERROR', 'File does not exist. Please specify a valid CSV file.');
-            $this->error = true;
+            die (Utility::log ('ERROR', 'File does not exist. Please specify a valid CSV file.'));
         }
     }
 
@@ -72,4 +70,5 @@ Class CSV {
         return $data;
     }
 }
+
 ?>

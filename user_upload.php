@@ -59,38 +59,32 @@ if (isset($options['file'])) {
 
     $file_uploader = new CSV($options['file']);
     
-    if (!$file_uploader->error) {
-        if (isset($options['u']) && isset($options['p']) && isset($options['h']) && isset($options['d'])) {
-            $db = new DB ($options['h'], $options['u'], $options['p'], $options['d']);
-            Utility::log ('INFO', 'Reading file...');
-            $csv_data = $file_uploader->parse_csv();
-            $file_uploader->close_csv();
+    if (isset($options['u']) && isset($options['p']) && isset($options['h']) && isset($options['d'])) {
+        $db = new DB ($options['h'], $options['u'], $options['p'], $options['d']);
+        Utility::log ('INFO', 'Reading file...');
+        $csv_data = $file_uploader->parse_csv();
+        $file_uploader->close_csv();
 
-            foreach ($csv_data as $data) {
-                $data['name'] = Utility::title_case ($data['name']);
-                $data['surname'] = Utility::title_case ($data['surname']);
-                $data['email'] = strtolower($data['email']);
-                Utility::log ('INFO', 'Checking User - '.implode(' | ', $data));
-                if (Utility::valid_email($data['email'])) {
-                    if (!isset($options['dry_run'])) { // Not creating table if it's a dry run
-                        $db->insert('users', $data); // Insert user
-                    }
-                } else {
-                    Utility::log ('ERROR', "\tUser error - Invalid email address.");
+        foreach ($csv_data as $data) {
+            $data['name'] = Utility::title_case ($data['name']);
+            $data['surname'] = Utility::title_case ($data['surname']);
+            $data['email'] = strtolower($data['email']);
+            Utility::log ('INFO', 'Checking User - '.implode(' | ', $data));
+            if (Utility::valid_email($data['email'])) {
+                if (!isset($options['dry_run'])) { // Not creating table if it's a dry run
+                    $db->insert('users', $data); // Insert user
                 }
+            } else {
+                Utility::log ('ERROR', "\tUser error - Invalid email address.");
             }
-
-            $db->close();
-        } else {
-            Utility::log ('ERROR', 'Please provide all required DB access parameters. Use --help for more information.');
         }
+
+        $db->close();
     } else {
-        Utility::log ('INFO', 'Exiting script due to file error.');
+        Utility::log ('ERROR', 'Please provide all required DB access parameters. Use --help for more information.');
     }
 
     exit;
 }
-
-
 
 ?>

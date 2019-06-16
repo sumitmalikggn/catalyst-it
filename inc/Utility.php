@@ -1,5 +1,11 @@
 <?php
+/**
+ * Class with static utility methods 
+ */
 Class Utility {
+    /**
+     * Output messages on Terminal
+     */
     public static function log ($type, $msg) {
         switch ($type) {
             case 'SUCCESS':
