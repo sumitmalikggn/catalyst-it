@@ -10,20 +10,19 @@ Class CSV {
     public function __construct ($file_path) {
         if (is_file($file_path)) {
             if ($this->valid_csv($file_path)) {
-                Utility::log ("Reading file...");
                 try {
                     $this->file = fopen($file_path, "r");
                 } catch (exception $e) {
-                    Utility::log ("Failed to open file: ", $e->getMessage());
+                    Utility::log ('ERROR', 'Failed to open file: ', $e->getMessage());
                     $this->error = true;
                 }
             } else {
-                Utility::log ("Invalid file. Please specify a valid CSV file.");
+                Utility::log ('ERROR', 'Invalid file. Please specify a valid CSV file.');
                 $this->error = true;
             }
 
         } else {
-            Utility::log ("File does not exist. Please specify a valid CSV file.");
+            Utility::log ('ERROR', 'File does not exist. Please specify a valid CSV file.');
             $this->error = true;
         }
     }

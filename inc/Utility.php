@@ -1,7 +1,19 @@
 <?php
 Class Utility {
-    public static function log ($msg) {
-        echo "\t" . $msg . "\n";
+    public static function log ($type, $msg) {
+        switch ($type) {
+            case 'SUCCESS':
+                $color = '0;32';
+                break;
+            case 'ERROR':
+                $color = '0;31';
+                break;
+            case 'INFO':
+            default:
+                $color = '0;30';
+        }
+        
+        echo "\t".chr(27)."[".$color."m" . $msg . chr(27)."[0m\n";
 
         return;
     }
@@ -10,13 +22,13 @@ Class Utility {
      * This method will display help text
      */
     public static function display_help () {
-        self::log ("--file \t\t\t This is the name of the CSV to be parsed");
-        self::log ("--create_table \t\t This will cause the MySQL users table to be built \n\t\t\t\t (and no further action will be taken)");
-        self::log ("--dry_run \t\t This will be used with the --file directive in the instance \n\t\t\t\t that we want to run the script but not insert into the DB.\n\t\t\t\t All other functions will be executed, but the database won't \n\t\t\t\t be altered");
-        self::log ("-u \t\t\t MySQL username");
-        self::log ("-p \t\t\t MySQL password");
-        self::log ("-h \t\t\t MySQL host");
-        self::log ("-d \t\t\t MySQL db name");
+        self::log ('INFO', "--file \t\t\t This is the name of the CSV to be parsed");
+        self::log ('INFO', "--create_table \t\t This will cause the MySQL users table to be built \n\t\t\t\t (and no further action will be taken)");
+        self::log ('INFO', "--dry_run \t\t This will be used with the --file directive in the instance \n\t\t\t\t that we want to run the script but not insert into the DB.\n\t\t\t\t All other functions will be executed, but the database won't \n\t\t\t\t be altered");
+        self::log ('INFO', "-u \t\t\t MySQL username");
+        self::log ('INFO', "-p \t\t\t MySQL password");
+        self::log ('INFO', "-h \t\t\t MySQL host");
+        self::log ('INFO', "-d \t\t\t MySQL db name");
 
         return;
     }
